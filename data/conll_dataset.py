@@ -21,17 +21,16 @@ MAP_DICT = {
 }
 
 class CoNLL(Dataset):
-    def __init__(self, task: str, data: HFDataset, model_name:str) -> None:
+    def __init__(self, task: str, data: HFDataset, model_name:str, aps: bool) -> None:
         super().__init__()
         self.task = task + '_tags'
         self.input, self.labels, self.label_mask, self.attention_mask = [], [], [], []
         self.ignore_columns = ['ner_tags','pos_tags', 'id', 'chunk_tags', 'tokens']
         
-        aps = True if 'berta' in model_name else False
-        tokenizer_name = 'microsoft/deberta-xlarge' if 'deberta' in model_name else model_name
+        use_fast = False if 'v2' in model_name else True
         self.tokenizer = AutoTokenizer.from_pretrained(
-            tokenizer_name,
-            use_fast=True,
+            model_name,
+            use_fast=use_fast,
             revision='main',
             add_prefix_space=aps,
         )
@@ -51,13 +50,13 @@ class CoNLL(Dataset):
             self.tokenize_and_align_labels,
             batched=True,
             load_from_cache_file=True,
-            desc="Running tokenizer on train dataset",
+            desc="Running tokenizer on validation dataset",
         )
         self.test_data = data['test'].map(
             self.tokenize_and_align_labels,
             batched=True,
             load_from_cache_file=True,
-            desc="Running tokenizer on train dataset",
+            desc="Running tokenizer on test dataset",
         )
 
         self.data_collator = DataCollatorForTokenClassification(self.tokenizer, pad_to_multiple_of=8)
@@ -105,7 +104,14 @@ class CoNLL(Dataset):
         # exit()
         labels = []
         for i, label in enumerate(examples[self.task]):
-            word_ids = tokenized_inputs.word_ids(batch_index=i)
+            word_ids = [None]
+            for j, word in enumerate(examples['tokens'][i]):
+                token = self.tokenizer.encode(word, add_special_tokens=False)
+                # print(token)
+                word_ids += [j] * len(token)
+            word_ids += [None]
+            
+            # word_ids = tokenized_inputs.word_ids(batch_index=i)
             previous_word_idx = None
             label_ids = []
             for word_idx in word_ids:

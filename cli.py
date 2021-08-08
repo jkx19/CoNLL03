@@ -8,8 +8,6 @@ import torch.nn.functional as F
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.sampler import RandomSampler
 from torch.optim import AdamW
-from transformers import TrainingArguments, HfArgumentParser
-from transformers import RobertaForTokenClassification
 from transformers.trainer_pt_utils import get_parameter_names
 
 from tqdm import tqdm
@@ -22,8 +20,16 @@ import argparse
 from data.conll_dataset import CoNLL
 from model.prefix import BertForTokenClassification, BertPrefixModel
 from model.prefix import DeBertaPrefixModel
+from model.prefix import DeBertaV2PrefixModel
 from model.deberta import DebertaForTokenClassification
 from trainer import Trainer
+
+ADD_PREFIX_SPACE = {
+    'bert': False,
+    'deberta': True,
+    'gpt2': True,
+    'debertaV2': True,
+}
 
 
 @dataclass
@@ -166,11 +172,21 @@ class Trainer_API:
             if args.model_size == 'base':
                 self.model_name = 'microsoft/deberta-xlarge'
             elif args.model_size == 'large':
-                self.model_name = 'microsoft/deberta-xxlarge'
-        elif args.model == 'roberta':
-            self.model_name = 'roberta-large'
+                raise NotImplementedError
+        elif args.model == 'debertaV2':
+            if args.model_size == 'base':
+                self.model_name = 'microsoft/deberta-xlarge-v2'
+            elif args.model_size == 'large':
+                self.model_name = 'microsoft/deberta-xxlarge-v2'
+        elif args.model == 'gpt2':
+            if args.model_size == 'base':
+                self.model_name = 'gpt2-medium'
+            elif args.model_size == 'large':
+                self.model_name = 'gpt2-large'
+        
         raw_data = load_dataset('data/load_dataset.py')
-        dataset = CoNLL(self.task, raw_data, self.model_name)
+        add_prefix_space = ADD_PREFIX_SPACE[args.model]
+        dataset = CoNLL(self.task, raw_data, self.model_name, aps=add_prefix_space)
 
         self.train_dataset = dataset.train_data
         self.dev_dataset = dataset.dev_data
@@ -187,28 +203,30 @@ class Trainer_API:
             self.lm_config.hidden_dropout_prob = args.dropout
             self.lm_config.pre_seq_len = args.pre_seq_len
             self.lm_config.mid_dim = args.mid_dim
-            if 'deberta' in self.model_name:
+            if args.model == 'deberta':
                 self.model = DeBertaPrefixModel.from_pretrained(
                     self.model_name,
                     config=self.lm_config,
                     revision='main',
                 )
-            elif 'bert' in self.model_name:
+            elif args.model == 'debertaV2':
+                self.model = DeBertaV2PrefixModel.from_pretrained(
+                    self.model_name,
+                    config=self.lm_config,
+                    revision='main',
+                )
+            elif args.model == 'bert':
                 self.model = BertPrefixModel.from_pretrained(
                     self.model_name,
                     config=self.lm_config,
                     revision='main',
                 )
+            elif args.model == 'gpt2':
+                raise NotImplementedError
 
         elif args.method == 'finetune':
             if 'deberta' in self.model_name:
                 self.model = DebertaForTokenClassification.from_pretrained(
-                    self.model_name,
-                    config=self.lm_config,
-                    revision='main',
-                )
-            elif 'roberta' in self.model_name:
-                self.model = RobertaForTokenClassification.from_pretrained(
                     self.model_name,
                     config=self.lm_config,
                     revision='main',
@@ -364,12 +382,12 @@ class Trainer_API:
 
 def construct_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--lr", type=float, default=5e-5)
+    parser.add_argument("--lr", type=float, default=2e-3)
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--task', type=str, choices=['pos', 'chunk', 'ner'], default='ner')
     parser.add_argument('--pre_seq_len', type=int, default=4)
     parser.add_argument('--mid_dim', type=int, default=512)
-    parser.add_argument('--model', type=str,choices=['bert', 'deberta', 'roberta'], default='deberta')
+    parser.add_argument('--model', type=str,choices=['bert', 'deberta', 'devertaV2'], default='deberta')
     parser.add_argument('--model_size', type=str, choices=['base', 'large'], default='base')
     parser.add_argument('--method', type=str, choices=['prefix', 'finetune'], default='prefix')
     parser.add_argument('--epoch', type=int, default=30)
