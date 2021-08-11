@@ -380,19 +380,26 @@ class Trainer_API:
         return result
 
 
+def set_seed(args):
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+
 def construct_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--lr", type=float, default=2e-3)
+    parser.add_argument("--lr", type=float, default=2e-2)
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--task', type=str, choices=['pos', 'chunk', 'ner'], default='ner')
     parser.add_argument('--pre_seq_len', type=int, default=4)
     parser.add_argument('--mid_dim', type=int, default=512)
-    parser.add_argument('--model', type=str,choices=['bert', 'deberta', 'devertaV2'], default='deberta')
+    parser.add_argument('--model', type=str,choices=['bert', 'deberta', 'debertaV2'], default='deberta')
     parser.add_argument('--model_size', type=str, choices=['base', 'large'], default='base')
     parser.add_argument('--method', type=str, choices=['prefix', 'finetune'], default='prefix')
     parser.add_argument('--epoch', type=int, default=30)
     parser.add_argument('--dropout', type=float, default=0.1)
+    parser.add_argument('--seed', type=int, default=11)
     args = parser.parse_args()
+    set_seed(args)
     return args
 
 def main():
