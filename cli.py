@@ -343,7 +343,7 @@ class Trainer_API:
             pbar.set_description(f'Train_loss: {total_loss:.1f}, Eval_F1: {dev_result["f1"]:.3f}, Test_F1: {test_result["f1"]:.3f},')
 
         pbar.close()
-        return best_test_result
+        return {'dev': best_dev_result['f1'], 'test': best_test_result['f1']}
     
     def eval(self):
         self.model.eval()
@@ -398,6 +398,7 @@ def construct_args():
     parser.add_argument('--epoch', type=int, default=30)
     parser.add_argument('--dropout', type=float, default=0.1)
     parser.add_argument('--seed', type=int, default=11)
+    parser.add_argument('--cuda', type=str, default='7')
     args = parser.parse_args()
     set_seed(args)
     return args
