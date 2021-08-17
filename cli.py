@@ -343,7 +343,7 @@ class Trainer_API:
             pbar.set_description(f'Train_loss: {total_loss:.1f}, Eval_F1: {dev_result["f1"]:.3f}, Test_F1: {test_result["f1"]:.3f},')
 
         pbar.close()
-        return {'dev': best_dev_result['f1'], 'test': best_test_result['f1']}
+        return best_test_result
     
     def eval(self):
         self.model.eval()
