@@ -388,7 +388,7 @@ def set_seed(args):
 def construct_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--lr", type=float, default=2e-2)
-    parser.add_argument('--batch_size', type=int, default=16)
+    parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--task', type=str, choices=['pos', 'chunk', 'ner'], default='ner')
     parser.add_argument('--pre_seq_len', type=int, default=4)
     parser.add_argument('--mid_dim', type=int, default=512)
@@ -405,7 +405,7 @@ def construct_args():
 
 def main():
     args = construct_args()
-    os.environ["CUDA_VISIBLE_DEVICES"] = '7'
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda
     train_api = Trainer_API(args)
     result = train_api.train()
     sys.stdout = open('result.txt', 'a')
